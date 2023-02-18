@@ -17,7 +17,7 @@ AWS.config.update({
 });
 
 const downloadPDF = async (pdfURL) => {
-	const buffer = await needle('get', pdfURL);
+	const pdfObj = await needle('get', pdfURL);
 
 	console.log("started uploading to S3")
 
@@ -25,7 +25,7 @@ const downloadPDF = async (pdfURL) => {
 	s3Client.upload({
 		Bucket: BUCKET,
 		Key: KEY,
-		Body: buffer.body,
+		Body: pdfObj.body,
 		ContentEncoding: 'base64',
 		ContentType: 'application/pdf'
 	}, async (error, data) => {
