@@ -1,4 +1,4 @@
-var AWS = require('aws-sdk');
+const AWS = require('aws-sdk');
 const puppeteer = require('puppeteer');
 const needle = require('needle');
 
@@ -7,7 +7,8 @@ const SECRET_ACCESS_KEY = "<Secret Access Key Here>";
 const REGION = "<Region Here>";
 const BUCKET = "<Bucket Name Here>";
 const KEY = "<Key Here>";
-const awaitMilliSeconds = 5000;
+const AWAIT_MILLI_SECONDS = 5000;
+const REMOTE_HTML_PAGE_URL = "<Remote HTML Page Url Here>";
 
 AWS.config.update({
 	accessKeyId: ACCESS_KEY_ID,
@@ -15,33 +16,27 @@ AWS.config.update({
 	region: REGION
 });
 
-
 const downloadPDF = async (pdfURL) => {
-	try {
+	const buffer = await needle('get', pdfURL);
 
-		const buffer = await needle('get', pdfURL);
+	console.log("started uploading to S3")
 
-		console.log("started uploading to S3")
-
-		var s3Client = new AWS.S3();
-		s3Client.upload({
-			Bucket: BUCKET,
-			Key: KEY,
-			Body: buffer.body,
-			ContentEncoding: 'base64',
-			ContentType: 'application/pdf'
-		}, async (error, data) => {
-			if (error) console.log('error has happened', error);
-			else console.log('success', data);
-		})
-	} catch (e) {
-		console.log(e)
-	}
+	var s3Client = new AWS.S3();
+	s3Client.upload({
+		Bucket: BUCKET,
+		Key: KEY,
+		Body: buffer.body,
+		ContentEncoding: 'base64',
+		ContentType: 'application/pdf'
+	}, async (error, data) => {
+		if (error) console.log('error has happened', error);
+		else console.log('success', data);
+	})
 }
 
 
 (async function pupperteer() {
-	const htmlEmailBodyPath = 'https://my.billdu.com/share/invoice/86a198c5-5f8a-43c1-b027-dfa1421befdb?email=invoices%40leapin.com.au&pay=0';
+	const remoteHtmlPageUrl = REMOTE_HTML_PAGE_URL;
 	console.log('starting...');
 	const browser = await puppeteer.launch({
 		headless: false
@@ -52,10 +47,10 @@ const downloadPDF = async (pdfURL) => {
 		const page = await browser.newPage();
 
 		console.log('started navigating...');
-		await page.goto(htmlEmailBodyPath, { waitUntil: 'networkidle2' });
+		await page.goto(remoteHtmlPageUrl, { waitUntil: 'networkidle2' });
 		console.log('ended navigating...');
 
-		await new Promise(r => setTimeout(r, awaitMilliSeconds));
+		await new Promise(r => setTimeout(r, AWAIT_MILLI_SECONDS));
 
 		var pages = await browser.pages();
 		var lastPage = pages[pages.length - 1];
@@ -76,7 +71,7 @@ const downloadPDF = async (pdfURL) => {
 			downloadInvoiceBtn && await downloadInvoiceBtn.click();
 
 		}
-		await new Promise(r => setTimeout(r, awaitMilliSeconds));
+		await new Promise(r => setTimeout(r, AWAIT_MILLI_SECONDS));
 
 		await browser.close();
 
